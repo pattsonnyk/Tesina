@@ -1,0 +1,36 @@
+import cv2
+
+# Initialize the camera (you can specify the camera index, e.g., 0 for the default camera)
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Error: Cannot open the camera.")
+    exit(1)
+
+image_count = 1
+
+while image_count <= 30:  # Capture up to 30 images
+    print("Press the space bar to capture an image...")
+    
+    while True:
+        ret, frame = cap.read()
+        cv2.imshow("Press space bar to capture", frame)
+
+        key = cv2.waitKey(1)
+
+        if key == 32:  # Space bar
+            break
+
+    # Specify the path where you want to save the captured image
+    image_path = f"captured_image_{image_count}.jpg"
+
+    # Save the captured image to the specified path
+    cv2.imwrite(image_path, frame)
+
+    print(f"Image {image_count} saved as:", image_path)
+
+    image_count += 1
+
+# Release the camera and close OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
