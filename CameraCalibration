@@ -1,0 +1,50 @@
+import cv2
+import numpy as np
+import os
+
+# Define the pattern size (e.g., 8x6 for a 8x6 grid)
+pattern_size = (8, 6)
+
+# Set the size of each square in the pattern (e.g., 100 mm)
+square_size = 230  # Adjust based on your printed pattern
+
+# Lists to store world points (known 3D coordinates) and image points (detected 2D coordinates)
+world_points = []  # List of 3D points
+image_points = []  # List of 2D points
+
+# Path to the directory containing calibration images
+calibration_images_dir = r'C:\Users\Bernie\source\repos\Tesina\CalibrationImages'
+
+# Get a list of image files in the directory
+calibration_image_files = [f for f in os.listdir(calibration_images_dir) if f.endswith(('.jpg'))]
+
+# Capture calibration images and detect checkerboard corners in each image
+for image_file in calibration_image_files:
+    image_path = os.path.join(calibration_images_dir, image_file)
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Find checkerboard corners
+    ret, corners = cv2.findChessboardCorners(gray, pattern_size, None)
+
+    if ret:
+        print(f"Checkerboard detected in {image_file}. Number of corners: {len(corners)}")
+
+        # Define the world points (3D coordinates) based on square size
+        world_points.append(np.array([[(i * square_size, j * square_size, 0)] for j in range(pattern_size[1]) for i in range(pattern_size[0])], dtype=np.float32))
+        
+        # Refine corner positions for higher accuracy
+        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
+        
+        image_points.append(corners)
+    else:
+        print(f"Checkerboard not detected in {image_file}")
+
+# Calibrate the camera
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(world_points, image_points, gray.shape[::-1], None, None)
+
+# Print the intrinsic matrix (camera matrix) and distortion coefficients
+print("Intrinsic matrix (camera matrix):")
+print(mtx)
+print("\nDistortion coefficients:")
+print(dist)
