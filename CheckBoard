@@ -1,0 +1,24 @@
+import cv2
+import numpy as np
+
+# Define the pattern size (e.g., 9x6 for a 9x6 grid)
+pattern_size = (9, 6)
+
+# Set the size of each square in the pattern (e.g., 100 pixels)
+square_size = 100
+
+# Calculate the size of the checkerboard pattern
+pattern_width = pattern_size[0] * square_size
+pattern_height = pattern_size[1] * square_size
+
+# Create a blank image of the specified size
+checkerboard = np.zeros((pattern_height, pattern_width, 3), dtype=np.uint8)
+
+# Create the pattern by drawing squares
+for i in range(pattern_size[0]):
+    for j in range(pattern_size[1]):
+        if (i + j) % 2 == 0:
+            checkerboard[j * square_size:(j + 1) * square_size, i * square_size:(i + 1) * square_size] = 255
+
+# Save the pattern as an image
+cv2.imwrite("larger_checkerboard.png", checkerboard)
