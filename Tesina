@@ -1,0 +1,94 @@
+import cv2
+import numpy as np
+import time
+
+# Function to estimate the pose of the green object
+def estimate_pose(center, object_points_3d, K):
+    # Assume the cylinder is upright, so no rotation is needed
+    rvec = np.zeros((3, 1))
+    
+    # Scale and convert 2D center to a translation vector using the camera matrix
+    tvec = np.dot(np.linalg.inv(K), np.array([center[0], center[1], 1]))
+
+    return rvec, tvec
+
+# Function to display frames
+def display_frames(frame, contour_frame, thresh_frame):
+    cv2.imshow("Webcam Image", frame)
+    cv2.imshow("Contours", contour_frame)
+    cv2.imshow("Threshold", thresh_frame)
+
+# Open the default camera (usually the webcam)
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Error: Cannot open the camera.")
+    exit(1)
+
+# Camera calibration parameters (intrinsic matrix)
+fx = 742.28445254
+fy = 755.35483206
+cx = 303.07319489
+cy = 238.1099753
+K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 550]])
+dist_coeffs = np.array([[4.72075340e-02, -1.43555517e+00, 2.84470455e-03, -7.04580717e-04, 4.23421441e+00]])
+
+MIN_OBJECT_AREA = 1500  # Adjust this value based on your needs
+object_detected = False  # Flag to track if the object is detected
+
+while not object_detected:
+    ret, frame = cap.read()  # Capture a frame from the camera
+
+    if ret:
+        # Convert the frame to HSV color space
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # Define a tighter range for green color in HSV
+        lower_green = np.array([40, 40, 40])
+        upper_green = np.array([80, 255, 255])
+
+        # Threshold the image to get the binary mask
+        green_mask = cv2.inRange(hsv_frame, lower_green, upper_green)
+
+        # Find contours in the binary image
+        contours, _ = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Process the detected green object
+        if contours:
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > MIN_OBJECT_AREA:
+                    # Find the minimum enclosing circle
+                    (x, y), radius = cv2.minEnclosingCircle(contour)
+
+                    # Draw the circle on the original frame
+                    cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
+
+                    # Estimate the pose
+                    rvec, tvec = estimate_pose((x, y), None, K)  # Pass None for object_points_3d
+
+                    # Print the pose
+                    print("Rotation Vector (rvec):", rvec)
+                    print("Translation Vector (tvec):", tvec)
+
+                    object_detected = True
+
+                    # Draw circles on the contour frame
+                    contour_frame = frame.copy()
+                    cv2.circle(contour_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
+
+                    # Display frames
+                    display_frames(frame, contour_frame, green_mask)
+
+                    # Add a delay for 6 seconds
+                    cv2.waitKey(6000)
+
+        # Display frames
+        display_frames(frame, frame, green_mask)
+
+    if cv2.waitKey(1) & 0xFF == 27:  # Exit the loop when 'Esc' key is pressed
+        break
+
+# Release the camera and close all OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
